@@ -35,10 +35,14 @@ ENV/
 .DS_Store
 
 # Project specific
-uploads/
+uploads/*
+!uploads/.gitkeep
 *.png
 *.jpg
 *.jpeg
+*.gif
+*.bmp
+*.tiff
 
 # Logs
 *.log
