@@ -21,7 +21,7 @@ A web application that allows users to upload blurry images and enhance them usi
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/indromhars/Deblurrer.git
 cd deblurrer
 ```
 
