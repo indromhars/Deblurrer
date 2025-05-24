@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Deblurrer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="app" class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-4xl font-bold text-center mb-8 text-gray-800">Image Deblurrer</h1>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="image-upload">
+                        Upload Image
+                    </label>
+                    <div class="flex items-center justify-center w-full">
+                        <label class="flex flex-col w-full h-32 border-4 border-dashed hover:bg-gray-100 hover:border-gray-300">
+                            <div class="flex flex-col items-center justify-center pt-7">
+                                <svg class="w-12 h-12 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <p class="pt-1 text-sm tracking-wider text-gray-400 group-hover:text-gray-600">
+                                    Select a photo
+                                </p>
+                            </div>
+                            <input type="file" class="opacity-0" accept="image/*" @change="handleFileUpload" />
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Deblurring Method
+                    </label>
+                    <select v-model="selectedMethod" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="unsharp">Unsharp Mask</option>
+                        <option value="wiener">Wiener Filter</option>
+                    </select>
+                </div>
+
+                <div class="flex justify-center">
+                    <button @click="processImage" 
+                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                            :disabled="!selectedFile">
+                        Process Image
+                    </button>
+                </div>
+            </div>
+
+            <div v-if="selectedFile" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800">Original Image</h2>
+                    <img :src="originalImageUrl" class="w-full h-auto rounded-lg" alt="Original image">
+                </div>
+                <div v-if="processedImageUrl" class="bg-white rounded-lg shadow-lg p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800">Processed Image</h2>
+                    <img :src="processedImageUrl" class="w-full h-auto rounded-lg" alt="Processed image">
+                    <div class="mt-4 flex justify-center">
+                        <a :href="processedImageUrl" 
+                           download="deblurred.png"
+                           class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                            Download
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    selectedFile: null,
+                    selectedMethod: 'unsharp',
+                    originalImageUrl: null,
+                    processedImageUrl: null
+                }
+            },
+            methods: {
+                handleFileUpload(event) {
+                    const file = event.target.files[0]
+                    if (file) {
+                        this.selectedFile = file
+                        this.originalImageUrl = URL.createObjectURL(file)
+                        this.processedImageUrl = null
+                    }
+                },
+                async processImage() {
+                    if (!this.selectedFile) return
+
+                    const formData = new FormData()
+                    formData.append('file', this.selectedFile)
+                    formData.append('method', this.selectedMethod)
+
+                    try {
+                        const response = await fetch('/upload', {
+                            method: 'POST',
+                            body: formData
+                        })
+
+                        if (response.ok) {
+                            const blob = await response.blob()
+                            this.processedImageUrl = URL.createObjectURL(blob)
+                        } else {
+                            const error = await response.json()
+                            alert(error.error || 'An error occurred while processing the image')
+                        }
+                    } catch (error) {
+                        console.error('Error:', error)
+                        alert('An error occurred while processing the image')
+                    }
+                }
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html> 
