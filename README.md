@@ -36,12 +36,17 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Run the application:
+4. Add the uploads directory:
+```bash
+mkdir uploads
+```
+
+5. Run the application:
 ```bash
 flask --app app run
 ```
 
-5. Open your browser and navigate to `http://localhost:5000`
+6. Open your browser and navigate to `http://localhost:5000`
 
 ## 📝 Usage
 
