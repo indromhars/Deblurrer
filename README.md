@@ -1,5 +1,4 @@
-# 📸 Image Deblurring Web App
-
+# 📸 Deblurrer
 A web application that allows users to upload blurry images and enhance them using image restoration techniques.
 
 ## 🚀 Features
