@@ -102,7 +102,7 @@ if uploaded_file is not None:
     
     with col1:
         st.subheader("Original Image")
-        st.image(image, use_column_width=True)
+        st.image(image, width=None)
     
     # Processing method selection
     method = st.radio("Select deblurring method:", ["Unsharp Mask", "Wiener Filter"])
@@ -121,7 +121,7 @@ if uploaded_file is not None:
             
             with col2:
                 st.subheader("Processed Image")
-                st.image(processed_image, use_column_width=True)
+                st.image(processed_image, width=None)
                 
                 # Add download button
                 buf = io.BytesIO()
