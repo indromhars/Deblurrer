@@ -1,22 +1,30 @@
 import streamlit as st
-import cv2
 import numpy as np
 from PIL import Image
 import io
 
-# Set page config
-st.set_page_config(
-    page_title="Image Deblurrer",
-    page_icon="🖼️",
-    layout="wide"
-)
-
-# Title and description
-st.title("Image Deblurrer")
-st.write("Upload an image and choose a deblurring method to enhance its clarity.")
+# Try to import OpenCV, if not available, use PIL for basic operations
+try:
+    import cv2
+    OPENCV_AVAILABLE = True
+except ImportError:
+    OPENCV_AVAILABLE = False
+    st.warning("OpenCV is not available. Some advanced image processing features may be limited.")
 
 def unsharp_mask(image, kernel_size=(9, 9), sigma=2.0, amount=4.0, threshold=0):
     """Apply unsharp mask to the image with more aggressive parameters."""
+    if not OPENCV_AVAILABLE:
+        # Fallback to PIL-based implementation
+        img_array = np.array(image)
+        blurred = Image.fromarray(img_array).filter(ImageFilter.GaussianBlur(radius=sigma))
+        blurred_array = np.array(blurred)
+        diff = img_array - blurred_array
+        mask = np.abs(diff) > threshold
+        result = img_array + amount * diff * mask
+        result = np.clip(result, 0, 255).astype(np.uint8)
+        return result
+    
+    # OpenCV implementation
     image = image.astype(np.float32)
     blurred = cv2.GaussianBlur(image, kernel_size, sigma)
     diff = image - blurred
@@ -27,6 +35,10 @@ def unsharp_mask(image, kernel_size=(9, 9), sigma=2.0, amount=4.0, threshold=0):
 
 def wiener_filter(image, kernel_size=(5, 5), K=0.001):
     """Apply Wiener filter to the image with improved implementation."""
+    if not OPENCV_AVAILABLE:
+        st.error("Wiener filter is not available without OpenCV. Please install OpenCV for full functionality.")
+        return image
+    
     # Convert to float32 for better precision
     image = image.astype(np.float32)
     
@@ -58,26 +70,39 @@ def wiener_filter(image, kernel_size=(5, 5), K=0.001):
     
     # Normalize and convert back to uint8
     result = np.clip(result, 0, 255).astype(np.uint8)
-    
     return result
+
+# Set page config
+st.set_page_config(
+    page_title="Image Deblurrer",
+    page_icon="🖼️",
+    layout="wide"
+)
+
+# Title and description
+st.title("Image Deblurrer")
+st.write("Upload an image and choose a deblurring method to enhance its clarity.")
 
 # File uploader
 uploaded_file = st.file_uploader("Choose an image...", type=['png', 'jpg', 'jpeg'])
 
 if uploaded_file is not None:
-    # Read and display the original image
-    file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
-    image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+    # Read image
+    image = Image.open(uploaded_file)
+    image_array = np.array(image)
     
-    # Convert BGR to RGB for display
-    image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    # Convert to RGB if needed
+    if len(image_array.shape) == 2:  # Grayscale
+        image_array = np.stack((image_array,) * 3, axis=-1)
+    elif image_array.shape[2] == 4:  # RGBA
+        image_array = image_array[:, :, :3]
     
     # Create two columns for original and processed images
     col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("Original Image")
-        st.image(image_rgb, use_column_width=True)
+        st.image(image, use_column_width=True)
     
     # Processing method selection
     method = st.radio("Select deblurring method:", ["Unsharp Mask", "Wiener Filter"])
@@ -87,21 +112,20 @@ if uploaded_file is not None:
         with st.spinner("Processing image..."):
             # Process the image
             if method == "Unsharp Mask":
-                processed = unsharp_mask(image)
-            else:
-                processed = wiener_filter(image)
+                processed = unsharp_mask(image_array)
+            else:  # wiener
+                processed = wiener_filter(image_array)
             
-            # Convert BGR to RGB for display
-            processed_rgb = cv2.cvtColor(processed, cv2.COLOR_BGR2RGB)
+            # Convert to PIL Image for display
+            processed_image = Image.fromarray(processed)
             
             with col2:
                 st.subheader("Processed Image")
-                st.image(processed_rgb, use_column_width=True)
+                st.image(processed_image, use_column_width=True)
                 
                 # Add download button
-                processed_pil = Image.fromarray(processed_rgb)
                 buf = io.BytesIO()
-                processed_pil.save(buf, format="PNG")
+                processed_image.save(buf, format="PNG")
                 st.download_button(
                     label="Download processed image",
                     data=buf.getvalue(),
