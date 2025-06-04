@@ -11,8 +11,8 @@ except ImportError:
     OPENCV_AVAILABLE = False
     st.warning("OpenCV is not available. Some advanced image processing features may be limited.")
 
-def unsharp_mask(image, kernel_size=(9, 9), sigma=2.0, amount=4.0, threshold=0):
-    """Apply unsharp mask to the image with more aggressive parameters."""
+def unsharp_mask(image, kernel_size=(5, 5), sigma=1.0, amount=1.5, threshold=0):
+    """Apply unsharp mask to the image with tuned parameters for better quality."""
     if not OPENCV_AVAILABLE:
         # Fallback to PIL-based implementation
         img_array = np.array(image)
@@ -33,8 +33,8 @@ def unsharp_mask(image, kernel_size=(9, 9), sigma=2.0, amount=4.0, threshold=0):
     result = np.clip(result, 0, 255).astype(np.uint8)
     return result
 
-def wiener_filter(image, kernel_size=(5, 5), K=0.001):
-    """Apply Wiener filter to the image with improved implementation."""
+def wiener_filter(image, kernel_size=(3, 3), K=0.01):
+    """Apply Wiener filter to the image with tuned parameters for better quality."""
     if not OPENCV_AVAILABLE:
         st.error("Wiener filter is not available without OpenCV. Please install OpenCV for full functionality.")
         return image
@@ -72,6 +72,19 @@ def wiener_filter(image, kernel_size=(5, 5), K=0.001):
     result = np.clip(result, 0, 255).astype(np.uint8)
     return result
 
+def calculate_mse(original, processed):
+    # Ensure both images have the same shape and type
+    original = original.astype("float")
+    processed = processed.astype("float")
+    mse = np.mean((original - processed) ** 2)
+    return mse
+
+def calculate_psnr(mse, max_pixel=255.0):
+    if mse == 0:
+        return float('inf')
+    psnr = 20 * np.log10(max_pixel / np.sqrt(mse))
+    return psnr
+
 # Set page config
 st.set_page_config(
     page_title="Image Deblurrer",
@@ -81,6 +94,11 @@ st.set_page_config(
 
 # Title and description
 st.title("Image Deblurrer")
+st.markdown("""
+**MSE (Mean Squared Error)** and **PSNR (Peak Signal-to-Noise Ratio)** are common metrics to measure the quality of image restoration:
+- **MSE** measures the average squared difference between the original and processed image pixels. Lower values mean better quality.
+- **PSNR** expresses the ratio between the maximum possible power of a signal and the power of corrupting noise. Higher values mean better quality.
+""")
 st.write("Upload an image and choose a deblurring method to enhance its clarity.")
 
 # File uploader
@@ -116,12 +134,18 @@ if uploaded_file is not None:
             else:  # wiener
                 processed = wiener_filter(image_array)
             
+            # Calculate metrics
+            mse = calculate_mse(image_array, processed)
+            psnr = calculate_psnr(mse)
+            
             # Convert to PIL Image for display
             processed_image = Image.fromarray(processed)
             
             with col2:
                 st.subheader("Processed Image")
                 st.image(processed_image, width=None)
+                st.markdown(f"**MSE:** {mse:.2f}")
+                st.markdown(f"**PSNR:** {psnr:.2f} dB")
                 
                 # Add download button
                 buf = io.BytesIO()
